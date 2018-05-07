@@ -5,8 +5,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "shader_m.h"
-
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -20,6 +18,17 @@ void processInput(GLFWwindow *window) {
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 800;
+
+const char *vertexShaderSourse = "#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() { gl_Position = projection * view * model * vec4(aPos, 1.0f); }\n\0";
+
+const char *fragmentShaderSource = "#version 330 core\n"
+"out vec4 FragColor;\n"
+"void main() { FragColor = vec4(0.0f, 1.0f, 0.0f, 1.0f); }\n\0";
 
 int main()
 {
@@ -36,7 +45,21 @@ int main()
 	gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 	glEnable(GL_DEPTH_TEST);
 
-	Shader ourShader("C:/Users/73974/OneDrive/计算机图形学/作业/Homework 2/源码/vertex.vs", "C:/Users/73974/OneDrive/计算机图形学/作业/Homework 2/源码/fragment.fs");
+	unsigned int vertex = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertex, 1, &vertexShaderSourse, NULL);
+	glCompileShader(vertex);
+
+	unsigned int fragment = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragment, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragment);
+
+	unsigned int shaderprogram = glCreateProgram();
+	glAttachShader(shaderprogram, vertex);
+	glAttachShader(shaderprogram, fragment);
+	glLinkProgram(shaderprogram);
+
+	glDeleteShader(vertex);
+	glDeleteShader(fragment);
 
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f,
@@ -102,7 +125,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-		ourShader.use();
+		glUseProgram(shaderprogram);
 
 		glm::mat4 model;
 		glm::mat4 view;
@@ -111,13 +134,14 @@ int main()
 		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		
-		unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+		unsigned int modelLoc = glGetUniformLocation(shaderprogram, "model");
+		unsigned int viewLoc = glGetUniformLocation(shaderprogram, "view");
+		unsigned int projectionLoc = glGetUniformLocation(shaderprogram, "projection");
 		
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
 
-		ourShader.setMat4("projection", projection);
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
